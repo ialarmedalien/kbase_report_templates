@@ -1,0 +1,98 @@
+[%  include_dsv_parser = 1;
+
+    page_title        = 'HMMer MSA Prot-Prot Search Results';
+    table_id          = 'hmmer-table';
+    data_file         = '/static/data/hmmer.tsv';
+    data_file_format  = 'tsv';
+
+    WRAPPER 'views/inc/page_wrapper.tt';
+    PROCESS 'views/inc/macros.tt';
+    PROCESS 'views/inc/js.tt';
+
+    page_content = [
+        {   name      => page_title,
+            name_lc   => "hmmer",
+            content   => 'table',
+            table_config => {
+              id                => table_id,
+              for_datatables_js => 1,
+            }
+        },
+    ];
+
+    tabbed_layout( page_content = page_content );
+%]
+<script>
+  "use strict";
+  $(document).ready(function () {
+
+    function renderProgressBar( data, type ){
+      if (type !== 'display')
+        return data
+      let length = data[0]*1 + data[1]*1
+
+      return '<div class="progress">' +
+        '<div class="progress-bar progress-bar-null" style="width: ' + data[0] + '%"></div>'
+        + '<div class="progress-bar" role="progressbar" style="width: ' + data[1] + '%">'
+        + '<span class="sr-only">match: ' + data[0] + "%-" + length + '%</span></div>'
+        + '</div>';
+    }
+
+    const MIN_BIT_SCORE = 100,
+    cols = [
+      { data: "alignment_coverage",
+        title: "Alignment coverage",
+        orderable: false,
+        render: renderProgressBar,
+      },
+      {
+        data: "gene_id",
+        title: "Gene ID",
+      },
+      {
+        data: "function",
+        title: "Function",
+      },
+      {
+        data: "genome",
+        title: "Genome",
+      },
+      { data: "aln_len",
+        title: "Align. len.",
+      },
+      { data: "e-value",
+        title: "e-value"
+      },
+      { data: "bit_score",
+        title: "Bit score",
+      },
+      { data: "h_beg-h_end",
+        title: "H-beg - H-end",
+      },
+    ]
+
+[%  PROCESS default_table_conf %]
+
+    tableConfig.createdRow = function( row, data ) {
+      if ( data.bit_score < MIN_BIT_SCORE ) {
+        $(row).addClass( 'danger' );
+      }
+    }
+    tableConfig.order = [[ 7, "asc" ]]
+[%
+    WRAPPER dsv_wrapper;
+%]
+      data.forEach( d => {
+        // convert left/middle/right into appropriate things
+        d.alignment_coverage = [ d.left, d.middle, d.right ]
+      } )
+
+      tableConfig.data = data
+      $('#[% table_id %]').DataTable(tableConfig);
+[%
+    END; # dsv_wrapper
+%]
+  })
+</script>
+[% END; # end wrapper %]
+

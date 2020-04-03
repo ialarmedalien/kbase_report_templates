@@ -1,0 +1,107 @@
+[%  include_dsv_parser = 1;
+
+    page_title        = 'BLASTp Results';
+    table_id          = 'blastp_results-table';
+    data_file         = '/static/data/kb_blast_BLASTp_Search.tsv';
+    data_file_format  = 'tsv';
+
+    WRAPPER 'views/inc/page_wrapper.tt';
+    PROCESS 'views/inc/macros.tt';
+    PROCESS 'views/inc/js.tt';
+
+    page_content = [
+        {   name      => page_title,
+            name_lc   => "blastp_results",
+            content   => 'table',
+            table_config => {
+              id                => table_id,
+              for_datatables_js => 1,
+            }
+        },
+    ];
+
+    tabbed_layout( page_content = page_content );
+%]
+</div>
+<script>
+  "use strict";
+  $(document).ready(function () {
+
+    function renderMatchBar(data, type){
+      if (type !== 'display')
+        return data
+      let length = data[0]*1 + data[1]*1
+
+      return '<div class="progress">' +
+        '<div class="progress-bar progress-bar-null" style="width: ' + data[0] + '%"></div>'
+        + '<div class="progress-bar" role="progressbar" style="width: ' + data[1] + '%">'
+        + '<span class="sr-only">match: ' + data[0] + "%-" + length + '%</span></div>'
+        + '</div>';
+    }
+
+    const cols = [
+      { data: "alignment_coverage",
+        title: "Alignment coverage",
+        orderable: false,
+        render: renderMatchBar,
+      },
+      {
+        data: "gene_id",
+        title: "Gene ID",
+      },
+      {
+        data: "function",
+        title: "Function",
+      },
+      {
+        data: "genome",
+        title: "Genome",
+      },
+      { data: "ident%",
+        title: "Ident %",
+      },
+      { data: "aln_len",
+        title: "Align. len.",
+      },
+      { data: "e-value",
+        title: "e-value"
+      },
+      { data: "bit_score",
+        title: "Bit score",
+      },
+      { data: "start_end",
+        title: "Q start-end: match start-end",
+      },
+      { data: "mismatch",
+        title: "Mismatch",
+      },
+      { data: "gap_open",
+        title: "Gap open",
+      },
+    ]
+
+[%  PROCESS default_table_conf %]
+
+    tableConfig.createdRow = function( row, data ) {
+      if ( data.passes_criteria === "false" ) {
+        $(row).addClass( 'danger' );
+      }
+    }
+    tableConfig.order = [[ 1, "asc" ]]
+
+[%  WRAPPER dsv_wrapper %]
+      data.forEach( d => {
+        // convert left/middle/right into appropriate things
+        d.alignment_coverage = [ d.left, d.middle, d.right ]
+        // concat start/end, etc.
+        d.start_end = d.q_beg + '-' + d.q_end + ': ' + d.h_beg + '-' + d.h_end
+      } )
+
+      tableConfig.data = data
+      $('#[% table_id %]').DataTable(tableConfig);
+[%
+    END;
+%]
+  })
+</script>
+[% END; # end wrapper %]
